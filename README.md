@@ -20,11 +20,22 @@ The commits still go through—because breaking your workflow is evil—but your
 
 ## 📦 Installation
 
-Since it's written in Go, you can build from source, or install globally via `make`:
-
+### Method 1: Homebrew (macOS / Linux)
+Because the tool is hosted on a custom tap, you can install it using:
 ```bash
-git clone https://github.com/mellow/commit-roaster.git
-cd commit-roaster
+brew install PranayD1807/tap/commit-roaster
+```
+
+### Method 2: Go Install
+If you already have Go installed, this is the quickest method:
+```bash
+go install github.com/PranayD1807/Commit-Roaster@latest
+```
+
+### Method 3: Build from Source
+```bash
+git clone https://github.com/PranayD1807/Commit-Roaster.git
+cd Commit-Roaster
 make install
 ```
 
@@ -105,6 +116,26 @@ Want to make the roasts more savage? Adding new rules is incredibly easy!
 3. Add 10-15 funny strings to the `roastTemplates` map inside `roaster/roasts.go`. 
 
 Pull requests are actively encouraged!
+
+---
+
+## 🚀 Publishing New Versions
+This project uses **GoReleaser** to automate building cross-platform binaries, uploading GitHub Releases, and updating the Homebrew Tap formula.
+
+To publish a new version:
+
+1. Commit all your changes completely.
+2. Create and push a new lightweight git tag for the version:
+   ```bash
+   git tag -a v0.2.0 -m "Release v0.2.0"
+   git push origin v0.2.0
+   ```
+3. Run GoReleaser to automatically build and deploy:
+   ```bash
+   goreleaser release --clean
+   ```
+
+*Note: You must have a `GITHUB_TOKEN` exported in your terminal with `repo` scopes for GoReleaser to successfully push the release and update the tap.*
 
 ---
 

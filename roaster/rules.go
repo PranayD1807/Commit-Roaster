@@ -1,6 +1,7 @@
 package roaster
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -9,13 +10,18 @@ import (
 type RuleID string
 
 const (
-	RuleTooShort       RuleID = "too_short"
-	RuleTooVague       RuleID = "too_vague"
-	RuleAllCaps        RuleID = "all_caps"
-	RuleNoVerb         RuleID = "no_verb"
-	RuleProfanity      RuleID = "profanity"
-	RuleWallOfText     RuleID = "wall_of_text"
-	RuleTrailingPeriod RuleID = "trailing_period"
+	RuleTooShort             RuleID = "too_short"
+	RuleTooVague             RuleID = "too_vague"
+	RuleAllCaps              RuleID = "all_caps"
+	RuleNoVerb               RuleID = "no_verb"
+	RuleProfanity            RuleID = "profanity"
+	RuleWallOfText           RuleID = "wall_of_text"
+	RuleTrailingPeriod       RuleID = "trailing_period"
+	RuleTicketOnly           RuleID = "ticket_only"
+	RuleDespair              RuleID = "despair"
+	RuleFileNameOnly         RuleID = "file_name_only"
+	RuleExclamationOverdose  RuleID = "exclamation_overdose"
+	RuleDefaultMessage       RuleID = "default_message"
 )
 
 // Rule represents a single commit message check.
@@ -36,6 +42,11 @@ func DefaultRules() []Rule {
 		{ID: RuleProfanity, Name: "Profanity", Description: "Contains some choice words", Check: checkProfanity},
 		{ID: RuleWallOfText, Name: "Wall of Text", Description: "Subject line is way too long", Check: checkWallOfText},
 		{ID: RuleTrailingPeriod, Name: "Trailing Period", Description: "Subject line ends with a period", Check: checkTrailingPeriod},
+		{ID: RuleTicketOnly, Name: "Ticket Only", Description: "Just a Jira ticket or issue number", Check: checkTicketOnly},
+		{ID: RuleDespair, Name: "Despair / YOLO", Description: "Driven-by-desperation development", Check: checkDespair},
+		{ID: RuleFileNameOnly, Name: "File Name Only", Description: "Just a file or path", Check: checkFileNameOnly},
+		{ID: RuleExclamationOverdose, Name: "Exclamation Overdose", Description: "Too many exclamation marks", Check: checkExclamationOverdose},
+		{ID: RuleDefaultMessage, Name: "Default Message", Description: "Lazy auto-generated git message", Check: checkDefaultMessage},
 	}
 }
 
@@ -135,6 +146,60 @@ func checkWallOfText(msg string) bool {
 func checkTrailingPeriod(msg string) bool {
 	subject := strings.TrimSpace(FirstLine(msg))
 	return len(subject) > 1 && strings.HasSuffix(subject, ".")
+}
+
+func checkTicketOnly(msg string) bool {
+	subject := strings.TrimSpace(FirstLine(msg))
+	// Matches JIRA-1234, PROJ-42, #1234, Issue-42 exactly (or with very little surrounding text)
+	matched, _ := regexp.MatchString(`^([A-Za-z]+-\d+|#\d+)$`, subject)
+	return matched
+}
+
+func checkDespair(msg string) bool {
+	subject := strings.ToLower(FirstLine(msg))
+	despairWords := []string{
+		"hack", "pray", "praying", "hopefully",
+		"yolo", "ugly", "fingers crossed", "desperation",
+		"please work", "god help me", "magic", "wtf",
+		"i hate this", "tired", "give up", "black magic",
+	}
+	for _, w := range despairWords {
+		if strings.Contains(subject, w) {
+			return true
+		}
+	}
+	return false
+}
+
+func checkFileNameOnly(msg string) bool {
+	subject := strings.TrimSpace(FirstLine(msg))
+	// Look for typical file extensions or purely path-like structures
+	matched, _ := regexp.MatchString(`^([\w./-]+\.(go|js|ts|css|html|md|json|yml|yaml|py|rb|java|c|cpp))$`, subject)
+	return matched
+}
+
+func checkExclamationOverdose(msg string) bool {
+	subject := FirstLine(msg)
+	return strings.Contains(subject, "!!")
+}
+
+func checkDefaultMessage(msg string) bool {
+	subject := strings.TrimSpace(FirstLine(msg))
+	defaults := []string{
+		"Update README.md", // GitHub web UI
+		"Merge branch 'main'",
+		"Merge remote-tracking branch",
+		"Merge pull request #",
+		"Automatic merge",
+		"Revert \"",
+		"WIP on ",
+	}
+	for _, pre := range defaults {
+		if strings.HasPrefix(subject, pre) {
+			return true
+		}
+	}
+	return false
 }
 
 // FirstLine returns the first line of a message.

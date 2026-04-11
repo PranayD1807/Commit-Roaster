@@ -3,3 +3,6 @@ commit-roaster
 
 # OS
 .DS_Store
+
+# Added by goreleaser init:
+dist/

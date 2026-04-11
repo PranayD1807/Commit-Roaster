@@ -30,4 +30,3 @@ brews:
       name: homebrew-tap     
     description: "A CLI tool that roasts your terrible git commit messages."
     homepage: "https://github.com/PranayD1807/Commit-Roaster"
-    conflict_conflicts: []

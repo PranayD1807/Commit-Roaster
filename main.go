@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mellow/commit-roaster/hook"
-	"github.com/mellow/commit-roaster/roaster"
+	"github.com/PranayD1807/Commit-Roaster/hook"
+	"github.com/PranayD1807/Commit-Roaster/roaster"
 )
 
-const version = "0.1.0"
+const version = "0.1.1"
 
 func main() {
 	rand.Seed(time.Now().UnixNano())

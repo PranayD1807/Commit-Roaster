@@ -6,14 +6,16 @@
 
 <br />
 
-`commit-roaster` acts as a Git hook that quietly judges your development choices. Whenever you write a commit message that is too vague, too short, overly ecstatic, or driven by despair, `commit-roaster` will jump in and deliver a scathing critique directly to your terminal.
+`commit-roaster` quietly judges your commit messages every time you run `git commit` in your terminal. It uses lightweight shell integration — no git hooks, no file modifications, no conflicts with Husky or pre-commit.
 
-The commits still go through—because breaking your workflow is evil—but your ego will take a hit. 
+The commits still go through — because breaking your workflow is evil — but your ego will take a hit.
 
 ## Features
-- **Git Hook Integration:** Automatically roasts you right as you press Enter.
-- **Fast & Local:** No AI, no network dependencies, completely offline heuristical matching entirely in Go.
-- **Historical Analysis:** Run `stats` to view an audit of your commit history's overall lifespan hygiene.
+- **One-Command Setup:** Run `commit-roaster setup` and you're done. Works on Bash, Zsh, Fish, and PowerShell.
+- **Zero Conflicts:** Doesn't touch `.git/hooks`. Works alongside Husky, pre-commit, Lefthook, and any other hook manager.
+- **Fast & Local:** No AI, no network dependencies, completely offline heuristic matching entirely in Go.
+- **Cross-Platform:** Supports macOS, Linux, and Windows out of the box.
+- **Historical Analysis:** Run `stats` to view an audit of your commit history's overall hygiene.
 - **12 Brutal Rules:** More than 140 randomly rotated roasts so you rarely get the same insult twice.
 
 ---
@@ -39,24 +41,46 @@ cd Commit-Roaster
 make install
 ```
 
-### Enable the Git Hook
-To actually get roasted automatically, install the hook:
-
+### Enable Roasting (One Command!)
+After installing the binary, just run:
 ```bash
-# Install globally (recommended - affects all repos)
-commit-roaster install --global
-
-# Or install only in the current repository
-commit-roaster install
+commit-roaster setup
 ```
 
-*(To remove it at any time, run `commit-roaster uninstall [--global]`)*
+That's it. It auto-detects your shell (Bash, Zsh, Fish, or PowerShell), appends the integration line to the right profile file, and you're done. [(How does this work?)](HOW_IT_WORKS.md)
+
+To fully remove it later:
+```bash
+commit-roaster teardown
+```
+
+<details>
+<summary><strong>Manual setup (advanced)</strong></summary>
+
+If you prefer to add the integration yourself, use `commit-roaster init`:
+
+**Bash & Zsh** (`~/.zshrc` or `~/.bashrc`):
+```bash
+eval "$(commit-roaster init)"
+```
+
+**Fish** (`~/.config/fish/config.fish`):
+```fish
+commit-roaster init fish | source
+```
+
+**PowerShell** (`$PROFILE`):
+```powershell
+Invoke-Expression (&commit-roaster init powershell | Out-String)
+```
+</details>
+
 
 ---
 
 ## 🚀 Usage
 
-Wait for it to roast you organically when committing:
+Wait for it to roast you organically in the terminal when committing:
 ```bash
 $ git commit -m "update"
 
@@ -115,6 +139,12 @@ Want to make the roasts more savage? Adding new rules is incredibly easy!
 2. Register it in `DefaultRules()` and write a simple `checkMyRule(msg)` bool function.
 3. Add 10-15 funny strings to the `roastTemplates` map inside `roaster/roasts.go`. 
 
+### Running Tests
+To verify the core engine and ensure no regressions involve modifying user filesystem states, run the isolated test suite locally:
+```bash
+go test ./... -v
+```
+
 Pull requests are actively encouraged!
 
 ---
@@ -127,8 +157,8 @@ To publish a new version:
 1. Commit all your changes completely.
 2. Create and push a new lightweight git tag for the version:
    ```bash
-   git tag -a v0.2.0 -m "Release v0.2.0"
-   git push origin v0.2.0
+   git tag -a v1.0.0 -m "Release v1.0.0"
+   git push origin v1.0.0
    ```
 3. Run GoReleaser to automatically build and deploy:
    ```bash

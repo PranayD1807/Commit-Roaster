@@ -52,8 +52,8 @@ func TestInitDoesNotModifyGitHooks(t *testing.T) {
 
 	// 6. Verify everything is perfectly safe and isolated
 
-	// A) Ensure it actually outputs the shell wrapper correctly
-	if !strings.Contains(output, "git() {") || !strings.Contains(output, "commit-roaster roast") {
+	// A) Ensure it actually outputs a shell wrapper correctly (bash or powershell depending on OS)
+	if !strings.Contains(output, "commit-roaster roast") {
 		t.Errorf("cmdInit did not output the expected shell script wrapper")
 	}
 
@@ -80,7 +80,9 @@ func TestCleanLegacyHooks(t *testing.T) {
 	tmpRepo := t.TempDir()
 	
 	// Hijack HOME so global git config goes to tmpHome instead of mutating the dev's real environment
+	// Windows uses USERPROFILE for os.UserHomeDir(), Unix uses HOME
 	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
 	t.Setenv("XDG_CONFIG_HOME", tmpHome)
 
 	// Create mocked global ~/.commit-roaster folder
@@ -164,7 +166,7 @@ func TestCmdInitOutput(t *testing.T) {
 		{"Explicit PWSH", []string{"commit-roaster", "init", "pwsh"}, "", "Invoke-Expression"},
 		{"Implicit Zsh via Env", []string{"commit-roaster", "init"}, "/bin/zsh", "local ext_code=$?"},
 		{"Implicit Fish via Env", []string{"commit-roaster", "init"}, "/usr/bin/fish", "set -l ext_code $status"},
-		{"Default Bash", []string{"commit-roaster", "init"}, "", "git() {"},
+		{"Explicit Bash", []string{"commit-roaster", "init", "bash"}, "", "git() {"},
 	}
 
 	for _, tt := range tests {

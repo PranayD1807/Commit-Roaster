@@ -112,6 +112,40 @@ commit-roaster stats
 
 ---
 
+## 🤖 AI Roaster Mode
+
+Tired of local, hardcoded insults? Enable **AI Roaster Mode** to get creative, LLM-powered roasts from Google Gemini, Claude, or ChatGPT.
+
+### Configuration
+
+AI mode is disabled by default. To enable it:
+```bash
+commit-roaster ai enable
+```
+This interactive setup will guide you through:
+1. Selecting your AI provider (Gemini, Claude, or ChatGPT).
+2. Selecting from the latest supported models (e.g., `gemini-2.5-flash`, `claude-sonnet-4-20250514`, `gpt-4.1`).
+3. Entering your API key.
+
+To check your current AI roaster configuration and status:
+```bash
+commit-roaster ai status
+```
+
+To disable AI mode and revert to the local rule-based roaster:
+```bash
+commit-roaster ai disable
+```
+
+### 🔒 Security
+
+* **Owner-Only Permissions**: Your API key and choices are saved locally at `~/.config/commit-roaster/config.json` with strict `0600` permissions (owner read/write).
+* **Safe Output**: Your API key is masked when viewing `ai status`.
+* **Zero Logging**: API keys never leave your machine except when sent securely over HTTPS to the respective provider APIs.
+* **Fail Safe**: If the AI model fails (network error, invalid key), it falls back gracefully and silently to the local rule-based engine, never blocking your commits.
+
+---
+
 ## 📖 The Roast Rules
 
 `commit-roaster` analyzes your subject line against 12 different heuristics:

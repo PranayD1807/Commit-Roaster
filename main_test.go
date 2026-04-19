@@ -194,3 +194,90 @@ func TestCmdInitOutput(t *testing.T) {
 		})
 	}
 }
+
+func TestSetupAndTeardown(t *testing.T) {
+	tmpHome := t.TempDir()
+
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("USERPROFILE", tmpHome)
+	t.Setenv("SHELL", "/bin/zsh")
+
+	// 1. Run setup — should create .zshrc with the eval line
+	// Capture stdout (setup prints to stdout)
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	cmdSetup()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	profilePath := filepath.Join(tmpHome, ".zshrc")
+	data, err := os.ReadFile(profilePath)
+	if err != nil {
+		t.Fatalf("Expected .zshrc to be created, got error: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, shellMarker) {
+		t.Errorf("Expected shell marker in profile, got:\n%s", content)
+	}
+	if !strings.Contains(content, `eval "$(commit-roaster init)"`) {
+		t.Errorf("Expected eval line in profile, got:\n%s", content)
+	}
+
+	// 2. Run setup again — should be idempotent
+	oldStdout = os.Stdout
+	r, w, _ = os.Pipe()
+	os.Stdout = w
+
+	cmdSetup()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	buf.Reset()
+	io.Copy(&buf, r)
+
+	data2, _ := os.ReadFile(profilePath)
+	if strings.Count(string(data2), shellMarker) != 1 {
+		t.Errorf("Setup ran twice but marker appeared %d times (expected 1)", strings.Count(string(data2), shellMarker))
+	}
+
+	// 3. Add some user content before and after to make sure teardown preserves it
+	userContent := "# my custom alias\nalias ll='ls -la'\n"
+	os.WriteFile(profilePath, []byte(userContent+string(data)), 0644)
+
+	// 4. Run teardown
+	oldStdout = os.Stdout
+	r, w, _ = os.Pipe()
+	os.Stdout = w
+
+	cmdTeardown()
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	buf.Reset()
+	io.Copy(&buf, r)
+
+	finalData, err := os.ReadFile(profilePath)
+	if err != nil {
+		t.Fatalf("Profile file disappeared after teardown: %v", err)
+	}
+
+	finalContent := string(finalData)
+	if strings.Contains(finalContent, shellMarker) {
+		t.Errorf("Teardown failed to remove shell marker")
+	}
+	if strings.Contains(finalContent, "commit-roaster init") {
+		t.Errorf("Teardown failed to remove eval line")
+	}
+	if !strings.Contains(finalContent, "alias ll='ls -la'") {
+		t.Errorf("Teardown destroyed user content! Got:\n%s", finalContent)
+	}
+}

@@ -162,15 +162,7 @@ func detectShellProfile() (shellType string, profilePath string) {
 		return "bash", ""
 	}
 
-	if runtime.GOOS == "windows" {
-		// PowerShell profile location
-		out, err := exec.Command("powershell", "-NoProfile", "-Command", "echo $PROFILE").Output()
-		if err == nil && len(strings.TrimSpace(string(out))) > 0 {
-			return "powershell", strings.TrimSpace(string(out))
-		}
-		return "powershell", filepath.Join(home, "Documents", "WindowsPowerShell", "Microsoft.PowerShell_profile.ps1")
-	}
-
+	// Check $SHELL env first (works cross-platform, respects explicit overrides)
 	envShell := os.Getenv("SHELL")
 
 	if strings.Contains(envShell, "fish") {
@@ -179,7 +171,24 @@ func detectShellProfile() (shellType string, profilePath string) {
 	if strings.Contains(envShell, "zsh") {
 		return "zsh", filepath.Join(home, ".zshrc")
 	}
-	// Default to bash
+	if strings.Contains(envShell, "bash") || strings.Contains(envShell, "sh") {
+		profile := filepath.Join(home, ".bashrc")
+		if _, err := os.Stat(profile); os.IsNotExist(err) {
+			profile = filepath.Join(home, ".bash_profile")
+		}
+		return "bash", profile
+	}
+
+	// If $SHELL is not set, fall back to OS detection
+	if runtime.GOOS == "windows" {
+		out, err := exec.Command("powershell", "-NoProfile", "-Command", "echo $PROFILE").Output()
+		if err == nil && len(strings.TrimSpace(string(out))) > 0 {
+			return "powershell", strings.TrimSpace(string(out))
+		}
+		return "powershell", filepath.Join(home, "Documents", "WindowsPowerShell", "Microsoft.PowerShell_profile.ps1")
+	}
+
+	// Final fallback: bash
 	profile := filepath.Join(home, ".bashrc")
 	if _, err := os.Stat(profile); os.IsNotExist(err) {
 		profile = filepath.Join(home, ".bash_profile")

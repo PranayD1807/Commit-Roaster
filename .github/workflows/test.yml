@@ -1,0 +1,32 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Check out code
+      uses: actions/checkout@v4
+      
+    - name: Ensure Local Git Config Isolation
+      # Prevents warning when actions runner has different git ownership
+      run: git config --global --add safe.directory "*"
+
+    - name: Run Tests
+      run: go test -v ./...

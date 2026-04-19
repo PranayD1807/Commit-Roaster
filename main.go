@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -89,11 +90,51 @@ func cleanLegacyHooks() {
 
 // cmdInit outputs the shell integration script.
 func cmdInit() {
-	script := `
-# commit-roaster shell integration
-# Add this to your ~/.zshrc or ~/.bashrc:
-# eval "$(commit-roaster init)"
+	shell := "bash"
+	if len(os.Args) >= 3 {
+		shell = strings.ToLower(os.Args[2])
+	} else if envShell := os.Getenv("SHELL"); envShell != "" {
+		if strings.Contains(envShell, "fish") {
+			shell = "fish"
+		} else if strings.Contains(envShell, "zsh") {
+			shell = "zsh"
+		}
+	} else if runtime.GOOS == "windows" {
+		shell = "powershell"
+	}
 
+	var script string
+
+	switch shell {
+	case "fish":
+		script = `
+# commit-roaster integration for Fish
+# Add to ~/.config/fish/config.fish: commit-roaster init fish | source
+function git
+  command git $argv
+  set -l ext_code $status
+  if test "$argv[1]" = "commit"; and test $ext_code -eq 0
+    commit-roaster roast --last 1
+  end
+  return $ext_code
+end`
+	case "powershell", "pwsh", "ps":
+		script = `
+# commit-roaster integration for PowerShell
+# Add to your $PROFILE: Invoke-Expression (&commit-roaster init powershell | Out-String)
+function git {
+    & git.exe @args
+    $ext_code = $LASTEXITCODE
+    if ($args.Count -gt 0 -and $args[0] -eq "commit" -and $ext_code -eq 0) {
+        commit-roaster roast --last 1
+    }
+    exit $ext_code
+}`
+	default:
+		// bash, zsh, sh
+		script = `
+# commit-roaster integration for Bash/Zsh
+# Add to ~/.zshrc or ~/.bashrc: eval "$(commit-roaster init)"
 git() {
   command git "$@"
   local ext_code=$?
@@ -101,8 +142,9 @@ git() {
     commit-roaster roast --last 1
   fi
   return $ext_code
-}
-`
+}`
+	}
+
 	fmt.Println(strings.TrimSpace(script))
 }
 
@@ -204,7 +246,7 @@ func printUsage() {
 	fmt.Println("  Roasts your bad git commit messages. No AI, no API keys, no mercy.")
 	fmt.Println()
 	fmt.Println("  COMMANDS")
-	fmt.Println("    init                   Output shell integration script (add to .zshrc/.bashrc)")
+	fmt.Println("    init [shell]           Output shell script for bash/zsh, fish, or powershell")
 	fmt.Println("    uninstall              Clean up any legacy git hooks injected by older versions")
 	fmt.Println("    roast [--last N]       Roast the last N commits (default: 1)")
 	fmt.Println("    stats                  Analyze your full commit history")
@@ -212,8 +254,9 @@ func printUsage() {
 	fmt.Println("    version                Print version")
 	fmt.Println("    help                   Show this message")
 	fmt.Println()
-	fmt.Println(bold("  EXAMPLES"))
-	fmt.Println("    eval \"$(commit-roaster init)\"      # set up shell wrapper automatically")
+	fmt.Println("  EXAMPLES")
+	fmt.Println("    eval \"$(commit-roaster init)\"             # set up Bash/Zsh wrapper automatically")
+	fmt.Println("    commit-roaster init fish | source         # set up Fish wrapper automatically")
 	fmt.Println("    commit-roaster roast --last 5      # roast last 5 commits")
 	fmt.Println("    commit-roaster stats               # see your sin history")
 	fmt.Println()

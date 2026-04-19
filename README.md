@@ -42,10 +42,21 @@ make install
 ### Enable Shell Integration (No Hooks Needed!)
 Unlike fragile hook-based tools that break when combined with Husky or pre-commit, `commit-roaster` intercepts `git commit` safely via your shell, avoiding `.git/hooks` entirely. [(Read how this works)](HOW_IT_WORKS.md)
 
-To set it up safely in your shell, add this single line to your `~/.zshrc` or `~/.bashrc`:
+To set it up safely, add the corresponding line to your shell's profile:
 
+**Bash & Zsh** (`~/.zshrc` or `~/.bashrc`):
 ```bash
 eval "$(commit-roaster init)"
+```
+
+**Fish** (`~/.config/fish/config.fish`):
+```fish
+commit-roaster init fish | source
+```
+
+**PowerShell** (Run `$PROFILE` to find your profile script):
+```powershell
+Invoke-Expression (&commit-roaster init powershell | Out-String)
 ```
 
 Restart your terminal, and you're done!

@@ -148,3 +148,47 @@ func TestCleanLegacyHooks(t *testing.T) {
 		t.Errorf("Expected the .backup file to be moved/deleted after restoration")
 	}
 }
+
+func TestCmdInitOutput(t *testing.T) {
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
+	tests := []struct {
+		name     string
+		args     []string
+		envShell string
+		expected string
+	}{
+		{"Explicit Fish", []string{"commit-roaster", "init", "fish"}, "", "function git"},
+		{"Explicit PowerShell", []string{"commit-roaster", "init", "powershell"}, "", "$LASTEXITCODE"},
+		{"Explicit PWSH", []string{"commit-roaster", "init", "pwsh"}, "", "Invoke-Expression"},
+		{"Implicit Zsh via Env", []string{"commit-roaster", "init"}, "/bin/zsh", "local ext_code=$?"},
+		{"Implicit Fish via Env", []string{"commit-roaster", "init"}, "/usr/bin/fish", "set -l ext_code $status"},
+		{"Default Bash", []string{"commit-roaster", "init"}, "", "git() {"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Args = tt.args
+			t.Setenv("SHELL", tt.envShell)
+
+			// Safely hijack stdout
+			oldStdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			cmdInit()
+
+			w.Close()
+			os.Stdout = oldStdout
+
+			var buf bytes.Buffer
+			io.Copy(&buf, r)
+			output := buf.String()
+
+			if !strings.Contains(output, tt.expected) {
+				t.Errorf("Expected output to contain %q, but got syntax:\n%s", tt.expected, output)
+			}
+		})
+	}
+}

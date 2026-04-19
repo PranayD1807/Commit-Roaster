@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"github.com/PranayD1807/Commit-Roaster/roaster"
 )
 
-const version = "0.1.1"
+const version = "1.0.0"
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -24,10 +25,15 @@ func main() {
 
 	switch os.Args[1] {
 	case "init":
+		cleanLegacyHooks()
 		cmdInit()
-	case "install", "uninstall":
-		fmt.Fprintln(os.Stderr, "  ❌ The install/uninstall commands have been removed in favor of shell integration.")
-		fmt.Fprintln(os.Stderr, "     Run 'commit-roaster init' to learn how to add it to your terminal.")
+	case "uninstall":
+		cleanLegacyHooks()
+		fmt.Println("  ✅ Legacy git hooks have been successfully cleaned up.")
+		os.Exit(0)
+	case "install":
+		fmt.Fprintln(os.Stderr, "  ❌ The install command has been removed in favor of non-destructive shell integration.")
+		fmt.Fprintln(os.Stderr, "     Run 'commit-roaster init' to learn how to add it to your terminal securely.")
 		os.Exit(1)
 	case "roast":
 		n := getFlagInt(1, "--last", "-n")
@@ -48,6 +54,36 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  Unknown command: %s\n\n", os.Args[1])
 		printUsage()
 		os.Exit(1)
+	}
+}
+
+// cleanLegacyHooks removes any filesystem modifications made by versions < 1.0.0
+func cleanLegacyHooks() {
+	// 1. Clean Global core.hooksPath and ~/.commit-roaster folder
+	home, err := os.UserHomeDir()
+	if err == nil {
+		expected := filepath.Join(home, ".commit-roaster", "hooks")
+		out, _ := exec.Command("git", "config", "--global", "--get", "core.hooksPath").Output()
+		if strings.TrimSpace(string(out)) == expected {
+			exec.Command("git", "config", "--global", "--unset", "core.hooksPath").Run()
+		}
+		os.RemoveAll(filepath.Join(home, ".commit-roaster"))
+	}
+
+	// 2. Clean Local repository hook modifications
+	out, err := exec.Command("git", "rev-parse", "--git-dir").Output()
+	if err == nil {
+		gitDir := strings.TrimSpace(string(out))
+		hookPath := filepath.Join(gitDir, "hooks", "commit-msg")
+		data, err := os.ReadFile(hookPath)
+		if err == nil && strings.Contains(string(data), "commit-roaster") {
+			os.Remove(hookPath)
+			// Restore the previous hook if a backup was made
+			backupPath := hookPath + ".backup"
+			if _, err := os.Stat(backupPath); err == nil {
+				os.Rename(backupPath, hookPath)
+			}
+		}
 	}
 }
 
@@ -167,8 +203,9 @@ func printUsage() {
 	fmt.Printf("  %s v%s\n\n", bold("🔥 commit-roaster"), version)
 	fmt.Println("  Roasts your bad git commit messages. No AI, no API keys, no mercy.")
 	fmt.Println()
-	fmt.Println(bold("  COMMANDS"))
+	fmt.Println("  COMMANDS")
 	fmt.Println("    init                   Output shell integration script (add to .zshrc/.bashrc)")
+	fmt.Println("    uninstall              Clean up any legacy git hooks injected by older versions")
 	fmt.Println("    roast [--last N]       Roast the last N commits (default: 1)")
 	fmt.Println("    stats                  Analyze your full commit history")
 	fmt.Println("    hook <file>            Roast a commit message file (for pre-commit/husky)")

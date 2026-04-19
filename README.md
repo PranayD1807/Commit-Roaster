@@ -113,6 +113,12 @@ Want to make the roasts more savage? Adding new rules is incredibly easy!
 2. Register it in `DefaultRules()` and write a simple `checkMyRule(msg)` bool function.
 3. Add 10-15 funny strings to the `roastTemplates` map inside `roaster/roasts.go`. 
 
+### Running Tests
+To verify the core engine and ensure no regressions involve modifying user filesystem states, run the isolated test suite locally:
+```bash
+go test ./... -v
+```
+
 Pull requests are actively encouraged!
 
 ---

@@ -6,14 +6,16 @@
 
 <br />
 
-`commit-roaster` acts as a Git hook that quietly judges your development choices. Whenever you write a commit message that is too vague, too short, overly ecstatic, or driven by despair, `commit-roaster` will jump in and deliver a scathing critique directly to your terminal.
+`commit-roaster` quietly judges your commit messages every time you run `git commit` in your terminal. It uses lightweight shell integration — no git hooks, no file modifications, no conflicts with Husky or pre-commit.
 
-The commits still go through—because breaking your workflow is evil—but your ego will take a hit. 
+The commits still go through — because breaking your workflow is evil — but your ego will take a hit.
 
 ## Features
-- **Shell Integration:** Automatically roasts you right after you run `git commit`. Zero conflicts with pre-commit hooks or Husky.
-- **Fast & Local:** No AI, no network dependencies, completely offline heuristical matching entirely in Go.
-- **Historical Analysis:** Run `stats` to view an audit of your commit history's overall lifespan hygiene.
+- **One-Command Setup:** Run `commit-roaster setup` and you're done. Works on Bash, Zsh, Fish, and PowerShell.
+- **Zero Conflicts:** Doesn't touch `.git/hooks`. Works alongside Husky, pre-commit, Lefthook, and any other hook manager.
+- **Fast & Local:** No AI, no network dependencies, completely offline heuristic matching entirely in Go.
+- **Cross-Platform:** Supports macOS, Linux, and Windows out of the box.
+- **Historical Analysis:** Run `stats` to view an audit of your commit history's overall hygiene.
 - **12 Brutal Rules:** More than 140 randomly rotated roasts so you rarely get the same insult twice.
 
 ---
@@ -155,8 +157,8 @@ To publish a new version:
 1. Commit all your changes completely.
 2. Create and push a new lightweight git tag for the version:
    ```bash
-   git tag -a v0.2.0 -m "Release v0.2.0"
-   git push origin v0.2.0
+   git tag -a v1.0.0 -m "Release v1.0.0"
+   git push origin v1.0.0
    ```
 3. Run GoReleaser to automatically build and deploy:
    ```bash

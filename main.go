@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/PranayD1807/Commit-Roaster/hook"
 	"github.com/PranayD1807/Commit-Roaster/roaster"
 )
 
@@ -24,18 +23,12 @@ func main() {
 	}
 
 	switch os.Args[1] {
-	case "install":
-		global := hasFlag("--global", "-g")
-		if err := hook.Install(global); err != nil {
-			fmt.Fprintf(os.Stderr, "  ❌ %s\n", err)
-			os.Exit(1)
-		}
-	case "uninstall":
-		global := hasFlag("--global", "-g")
-		if err := hook.Uninstall(global); err != nil {
-			fmt.Fprintf(os.Stderr, "  ❌ %s\n", err)
-			os.Exit(1)
-		}
+	case "init":
+		cmdInit()
+	case "install", "uninstall":
+		fmt.Fprintln(os.Stderr, "  ❌ The install/uninstall commands have been removed in favor of shell integration.")
+		fmt.Fprintln(os.Stderr, "     Run 'commit-roaster init' to learn how to add it to your terminal.")
+		os.Exit(1)
 	case "roast":
 		n := getFlagInt(1, "--last", "-n")
 		cmdRoast(n)
@@ -56,6 +49,25 @@ func main() {
 		printUsage()
 		os.Exit(1)
 	}
+}
+
+// cmdInit outputs the shell integration script.
+func cmdInit() {
+	script := `
+# commit-roaster shell integration
+# Add this to your ~/.zshrc or ~/.bashrc:
+# eval "$(commit-roaster init)"
+
+git() {
+  command git "$@"
+  local ext_code=$?
+  if [ "$1" = "commit" ] && [ $ext_code -eq 0 ]; then
+    commit-roaster roast --last 1
+  fi
+  return $ext_code
+}
+`
+	fmt.Println(strings.TrimSpace(script))
 }
 
 // cmdHook is called by the git commit-msg hook. Reads the message file and roasts.
@@ -156,15 +168,15 @@ func printUsage() {
 	fmt.Println("  Roasts your bad git commit messages. No AI, no API keys, no mercy.")
 	fmt.Println()
 	fmt.Println(bold("  COMMANDS"))
-	fmt.Println("    install [--global]     Install the git hook (global or current repo)")
-	fmt.Println("    uninstall [--global]   Remove the git hook")
+	fmt.Println("    init                   Output shell integration script (add to .zshrc/.bashrc)")
 	fmt.Println("    roast [--last N]       Roast the last N commits (default: 1)")
 	fmt.Println("    stats                  Analyze your full commit history")
+	fmt.Println("    hook <file>            Roast a commit message file (for pre-commit/husky)")
 	fmt.Println("    version                Print version")
 	fmt.Println("    help                   Show this message")
 	fmt.Println()
 	fmt.Println(bold("  EXAMPLES"))
-	fmt.Println("    commit-roaster install --global    # roast all repos")
+	fmt.Println("    eval \"$(commit-roaster init)\"      # set up shell wrapper automatically")
 	fmt.Println("    commit-roaster roast --last 5      # roast last 5 commits")
 	fmt.Println("    commit-roaster stats               # see your sin history")
 	fmt.Println()

@@ -11,7 +11,7 @@
 The commits still go through—because breaking your workflow is evil—but your ego will take a hit. 
 
 ## Features
-- **Git Hook Integration:** Automatically roasts you right as you press Enter.
+- **Shell Integration:** Automatically roasts you right after you run `git commit`. Zero conflicts with pre-commit hooks or Husky.
 - **Fast & Local:** No AI, no network dependencies, completely offline heuristical matching entirely in Go.
 - **Historical Analysis:** Run `stats` to view an audit of your commit history's overall lifespan hygiene.
 - **12 Brutal Rules:** More than 140 randomly rotated roasts so you rarely get the same insult twice.
@@ -39,24 +39,22 @@ cd Commit-Roaster
 make install
 ```
 
-### Enable the Git Hook
-To actually get roasted automatically, install the hook:
+### Enable Shell Integration (No Hooks Needed!)
+Unlike fragile hook-based tools that break when combined with Husky or pre-commit, `commit-roaster` intercepts `git commit` safely via your shell, avoiding `.git/hooks` entirely. [(Read how this works)](HOW_IT_WORKS.md)
+
+To set it up safely in your shell, add this single line to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-# Install globally (recommended - affects all repos)
-commit-roaster install --global
-
-# Or install only in the current repository
-commit-roaster install
+eval "$(commit-roaster init)"
 ```
 
-*(To remove it at any time, run `commit-roaster uninstall [--global]`)*
+Restart your terminal, and you're done!
 
 ---
 
 ## 🚀 Usage
 
-Wait for it to roast you organically when committing:
+Wait for it to roast you organically in the terminal when committing:
 ```bash
 $ git commit -m "update"
 

@@ -54,3 +54,23 @@ jobs:
         fi
         echo "GEMINI_KEY=${GEMINI_KEY}" > .env
         go test -v -tags integration ./tests/ -run TestGemini -timeout 120s
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Run Coverage Report
+      uses: gwatts/go-coverage-action@v2
+      with:
+        cover-pkg: ./...

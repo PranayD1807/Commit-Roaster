@@ -88,18 +88,31 @@ func RunAIEnable() {
 	for i, m := range models {
 		fmt.Printf("    [%d] %s\n", i+1, m)
 	}
-	fmt.Printf("  Choose model (1-%d): ", len(models))
+	fmt.Printf("    [%d] Other (enter custom model name)\n", len(models)+1)
+	fmt.Printf("  Choose model (1-%d): ", len(models)+1)
 
 	modelChoice, _ := reader.ReadString('\n')
 	modelChoice = strings.TrimSpace(modelChoice)
 
 	idx := 0
 	_, err := fmt.Sscan(modelChoice, &idx)
-	if err != nil || idx < 1 || idx > len(models) {
+	if err != nil || idx < 1 || idx > len(models)+1 {
 		fmt.Fprintln(os.Stderr, "  ❌ Invalid choice. Setup aborted.")
 		os.Exit(1)
 	}
-	model := models[idx-1]
+
+	var model string
+	if idx == len(models)+1 {
+		fmt.Print("  Enter custom model name: ")
+		customModel, _ := reader.ReadString('\n')
+		model = strings.TrimSpace(customModel)
+		if model == "" {
+			fmt.Fprintln(os.Stderr, "  ❌ Model name cannot be empty. Setup aborted.")
+			os.Exit(1)
+		}
+	} else {
+		model = models[idx-1]
+	}
 
 	// 3. Enter API key
 	fmt.Println()

@@ -70,16 +70,6 @@ func roastWithRetry(t *testing.T, provider, model, apiKey, input string, maxRetr
 		}
 
 		errStr := err.Error()
-		
-		// If we hit the absolute daily free-tier quota limit, skip the integration test gracefully
-		// rather than failing the build, since daily free-tier keys are limited to 20 requests/day.
-		isDailyQuotaExceeded := strings.Contains(errStr, "GenerateRequestsPerDay") || 
-			strings.Contains(errStr, "quotaValue:20") || 
-			strings.Contains(errStr, "current quota, please check your plan")
-		if isDailyQuotaExceeded {
-			t.Skipf("⚠️ Gemini API daily free-tier limit exhausted (20 requests/day). Skipping integration test.")
-			return "", nil
-		}
 
 		isRateLimit := strings.Contains(errStr, "429") || 
 			strings.Contains(errStr, "RESOURCE_EXHAUSTED") || 

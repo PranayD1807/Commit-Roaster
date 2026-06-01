@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
-    name: Run Unit Tests
+  unit-tests:
+    name: Unit Tests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -16,16 +16,61 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.21'
 
-    - name: Check out code
-      uses: actions/checkout@v4
-      
     - name: Ensure Local Git Config Isolation
       run: git config --global --add safe.directory "*"
 
-    - name: Run Tests
+    - name: Run Unit Tests
       run: go test -v ./...
+
+  integration-tests:
+    name: Integration Tests (Gemini)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Run Integration Tests
+      env:
+        GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+      # Check if the secret is set in the shell to avoid GitHub Actions YAML context limitations
+      run: |
+        if [ -z "$GEMINI_KEY" ]; then
+          echo "⚠️ GEMINI_KEY secret is not configured. Skipping integration tests."
+          exit 0
+        fi
+        echo "GEMINI_KEY=${GEMINI_KEY}" > .env
+        go test -v -tags integration ./tests/ -run TestGemini -timeout 120s
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Run Coverage Report
+      uses: gwatts/go-coverage-action@v2
+      with:
+        cover-pkg: ./...

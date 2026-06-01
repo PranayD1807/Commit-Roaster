@@ -1,4 +1,4 @@
-package main
+package cmd_test
 
 import (
 	"bytes"
@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/PranayD1807/Commit-Roaster/cmd"
 )
 
 // TestInitDoesNotModifyGitHooks acts as a regression test to guarantee
@@ -40,7 +42,7 @@ func TestInitDoesNotModifyGitHooks(t *testing.T) {
 	os.Stdout = w
 
 	// 4. Run the init command
-	cmdInit()
+	cmd.CmdInit()
 
 	// 5. Restore stdout
 	w.Close()
@@ -52,9 +54,9 @@ func TestInitDoesNotModifyGitHooks(t *testing.T) {
 
 	// 6. Verify everything is perfectly safe and isolated
 
-	// A) Ensure it actually outputs a shell wrapper correctly (bash or powershell depending on OS)
+	// A) Ensure it actually outputs a shell wrapper correctly
 	if !strings.Contains(output, "commit-roaster roast") {
-		t.Errorf("cmdInit did not output the expected shell script wrapper")
+		t.Errorf("CmdInit did not output the expected shell script wrapper")
 	}
 
 	// B) PURE VERIFICATION: Assert that the .git/hooks directory was completely untouched
@@ -64,13 +66,13 @@ func TestInitDoesNotModifyGitHooks(t *testing.T) {
 	}
 
 	if string(content) != originalHookContent {
-		t.Errorf("SECURITY/REGRESSION VIOLATION: cmdInit altered files in .git/hooks! Expected %q, got %q", originalHookContent, string(content))
+		t.Errorf("SECURITY/REGRESSION VIOLATION: CmdInit altered files in .git/hooks! Expected %q, got %q", originalHookContent, string(content))
 	}
 
 	// C) Check if it accidentally created any new files in the hooks directory
 	files, _ := os.ReadDir(hooksDir)
 	if len(files) > 1 {
-		t.Errorf("SECURITY/REGRESSION VIOLATION: cmdInit created new rogue files in .git/hooks! Found %d files, expected 1.", len(files))
+		t.Errorf("SECURITY/REGRESSION VIOLATION: CmdInit created new rogue files in .git/hooks! Found %d files, expected 1.", len(files))
 	}
 }
 
@@ -78,9 +80,8 @@ func TestCleanLegacyHooks(t *testing.T) {
 	// 1. Setup isolated directories
 	tmpHome := t.TempDir()
 	tmpRepo := t.TempDir()
-	
-	// Hijack HOME so global git config goes to tmpHome instead of mutating the dev's real environment
-	// Windows uses USERPROFILE for os.UserHomeDir(), Unix uses HOME
+
+	// Hijack HOME so global git config goes to tmpHome
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("USERPROFILE", tmpHome)
 	t.Setenv("XDG_CONFIG_HOME", tmpHome)
@@ -92,8 +93,8 @@ func TestCleanLegacyHooks(t *testing.T) {
 	}
 
 	// Mock global git config using the safely overridden HOME
-	cmd := exec.Command("git", "config", "--global", "core.hooksPath", globalHooksDir)
-	if err := cmd.Run(); err != nil {
+	gitCmd := exec.Command("git", "config", "--global", "core.hooksPath", globalHooksDir)
+	if err := gitCmd.Run(); err != nil {
 		t.Fatalf("Failed to setup mock global git config: %v", err)
 	}
 
@@ -102,8 +103,8 @@ func TestCleanLegacyHooks(t *testing.T) {
 	os.Chdir(tmpRepo)
 	defer os.Chdir(originalWD)
 
-	cmdInit := exec.Command("git", "init")
-	if err := cmdInit.Run(); err != nil {
+	initCmd := exec.Command("git", "init")
+	if err := initCmd.Run(); err != nil {
 		t.Fatalf("Failed to initialize mock git repo: %v", err)
 	}
 
@@ -117,21 +118,21 @@ func TestCleanLegacyHooks(t *testing.T) {
 	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\ncommit-roaster hook \"$1\""), 0755); err != nil {
 		t.Fatalf("Failed to write mock hook: %v", err)
 	}
-	
+
 	// Write a mock backup of an original pre-commit/husky hook
 	if err := os.WriteFile(backupPath, []byte("#!/bin/sh\n# original hook stuff"), 0755); err != nil {
 		t.Fatalf("Failed to write backup hook: %v", err)
 	}
 
 	// 3. EXECUTE the cleanup logic
-	cleanLegacyHooks()
+	cmd.CleanLegacyHooks()
 
 	// 4. Verify global cleanup
 	out, err := exec.Command("git", "config", "--global", "--get", "core.hooksPath").Output()
 	if err == nil && len(strings.TrimSpace(string(out))) > 0 {
 		t.Errorf("Expected core.hooksPath to be unset globally, got: %s", string(out))
 	}
-	
+
 	if _, err := os.Stat(filepath.Join(tmpHome, ".commit-roaster")); !os.IsNotExist(err) {
 		t.Errorf("Expected ~/.commit-roaster directory to be completely deleted")
 	}
@@ -174,12 +175,11 @@ func TestCmdInitOutput(t *testing.T) {
 			os.Args = tt.args
 			t.Setenv("SHELL", tt.envShell)
 
-			// Safely hijack stdout
 			oldStdout := os.Stdout
 			r, w, _ := os.Pipe()
 			os.Stdout = w
 
-			cmdInit()
+			cmd.CmdInit()
 
 			w.Close()
 			os.Stdout = oldStdout
@@ -203,12 +203,11 @@ func TestSetupAndTeardown(t *testing.T) {
 	t.Setenv("SHELL", "/bin/zsh")
 
 	// 1. Run setup — should create .zshrc with the eval line
-	// Capture stdout (setup prints to stdout)
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	cmdSetup()
+	cmd.CmdSetup()
 
 	w.Close()
 	os.Stdout = oldStdout
@@ -223,7 +222,7 @@ func TestSetupAndTeardown(t *testing.T) {
 	}
 
 	content := string(data)
-	if !strings.Contains(content, shellMarker) {
+	if !strings.Contains(content, cmd.ShellMarker) {
 		t.Errorf("Expected shell marker in profile, got:\n%s", content)
 	}
 	if !strings.Contains(content, `eval "$(commit-roaster init)"`) {
@@ -235,7 +234,7 @@ func TestSetupAndTeardown(t *testing.T) {
 	r, w, _ = os.Pipe()
 	os.Stdout = w
 
-	cmdSetup()
+	cmd.CmdSetup()
 
 	w.Close()
 	os.Stdout = oldStdout
@@ -244,8 +243,8 @@ func TestSetupAndTeardown(t *testing.T) {
 	io.Copy(&buf, r)
 
 	data2, _ := os.ReadFile(profilePath)
-	if strings.Count(string(data2), shellMarker) != 1 {
-		t.Errorf("Setup ran twice but marker appeared %d times (expected 1)", strings.Count(string(data2), shellMarker))
+	if strings.Count(string(data2), cmd.ShellMarker) != 1 {
+		t.Errorf("Setup ran twice but marker appeared %d times (expected 1)", strings.Count(string(data2), cmd.ShellMarker))
 	}
 
 	// 3. Add some user content before and after to make sure teardown preserves it
@@ -257,7 +256,7 @@ func TestSetupAndTeardown(t *testing.T) {
 	r, w, _ = os.Pipe()
 	os.Stdout = w
 
-	cmdTeardown()
+	cmd.CmdTeardown()
 
 	w.Close()
 	os.Stdout = oldStdout
@@ -271,7 +270,7 @@ func TestSetupAndTeardown(t *testing.T) {
 	}
 
 	finalContent := string(finalData)
-	if strings.Contains(finalContent, shellMarker) {
+	if strings.Contains(finalContent, cmd.ShellMarker) {
 		t.Errorf("Teardown failed to remove shell marker")
 	}
 	if strings.Contains(finalContent, "commit-roaster init") {

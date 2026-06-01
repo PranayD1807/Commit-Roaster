@@ -59,6 +59,47 @@ func geminiKey(t *testing.T) string {
 	return ""
 }
 
+// roastWithRetry retries the AI API call if a transient rate limit (429/RESOURCE_EXHAUSTED) is hit.
+func roastWithRetry(t *testing.T, provider, model, apiKey, input string, maxRetries int) (string, error) {
+	var roast string
+	var err error
+	for i := 0; i <= maxRetries; i++ {
+		roast, err = airoaster.RoastCommit(provider, model, apiKey, input)
+		if err == nil {
+			return roast, nil
+		}
+
+		errStr := err.Error()
+		
+		// If we hit the absolute daily free-tier quota limit, skip the integration test gracefully
+		// rather than failing the build, since daily free-tier keys are limited to 20 requests/day.
+		isDailyQuotaExceeded := strings.Contains(errStr, "GenerateRequestsPerDay") || 
+			strings.Contains(errStr, "quotaValue:20") || 
+			strings.Contains(errStr, "current quota, please check your plan")
+		if isDailyQuotaExceeded {
+			t.Skipf("⚠️ Gemini API daily free-tier limit exhausted (20 requests/day). Skipping integration test.")
+			return "", nil
+		}
+
+		isRateLimit := strings.Contains(errStr, "429") || 
+			strings.Contains(errStr, "RESOURCE_EXHAUSTED") || 
+			strings.Contains(errStr, "rate limit") || 
+			strings.Contains(errStr, "quota")
+
+		if i < maxRetries && isRateLimit {
+			sleepDur := 15 * time.Second
+			if strings.Contains(errStr, "Please retry in") {
+				sleepDur = 30 * time.Second
+			}
+			t.Logf("│  ⚠️ Rate limit hit. Sleeping %v before retry %d/%d...", sleepDur, i+1, maxRetries)
+			time.Sleep(sleepDur)
+			continue
+		}
+		break
+	}
+	return roast, err
+}
+
 // TestGeminiRoastBadCommit sends a notoriously bad commit message and expects a roast back.
 func TestGeminiRoastBadCommit(t *testing.T) {
 	apiKey := geminiKey(t)
@@ -69,7 +110,7 @@ func TestGeminiRoastBadCommit(t *testing.T) {
 	t.Logf("┌─ Input:    %q", input)
 	t.Logf("│  Expected: %s", expected)
 
-	roast, err := airoaster.RoastCommit("gemini", "gemini-2.5-flash", apiKey, input)
+	roast, err := roastWithRetry(t, "gemini", "gemini-2.5-flash", apiKey, input, 3)
 	if err != nil {
 		t.Fatalf("│  Error:    %v", err)
 	}
@@ -95,7 +136,7 @@ func TestGeminiCleanCommit(t *testing.T) {
 	t.Logf("┌─ Input:    %q", input)
 	t.Logf("│  Expected: %s", expected)
 
-	roast, err := airoaster.RoastCommit("gemini", "gemini-2.5-flash", apiKey, input)
+	roast, err := roastWithRetry(t, "gemini", "gemini-2.5-flash", apiKey, input, 3)
 	if err != nil {
 		t.Fatalf("│  Error:    %v", err)
 	}
@@ -135,7 +176,7 @@ func TestGeminiWIPCommit(t *testing.T) {
 			t.Logf("┌─ Input:    %q", tc.input)
 			t.Logf("│  Expected: %s", tc.expected)
 
-			roast, err := airoaster.RoastCommit("gemini", "gemini-2.5-flash", apiKey, tc.input)
+			roast, err := roastWithRetry(t, "gemini", "gemini-2.5-flash", apiKey, tc.input, 3)
 			if err != nil {
 				t.Fatalf("│  Error:    %v", err)
 			}

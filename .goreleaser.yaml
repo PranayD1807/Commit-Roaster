@@ -5,6 +5,8 @@ project_name: commit-roaster
 builds:
   - env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/PranayD1807/Commit-Roaster/cmd.Version={{.Version}}
     goos:
       - linux
       - windows
@@ -24,9 +26,20 @@ archives:
         format: zip
 
 brews:
+  # Stable formula — only published on full releases (no pre-release tag)
   - name: commit-roaster
+    skip_upload: "{{ if .Prerelease }}true{{ end }}"
     repository:
       owner: PranayD1807
-      name: homebrew-tap     
+      name: homebrew-tap
     description: "A CLI tool that roasts your terrible git commit messages."
+    homepage: "https://github.com/PranayD1807/Commit-Roaster"
+
+  # Beta formula — only published on pre-release tags (e.g. v2.0.0-beta.1)
+  - name: commit-roaster-beta
+    skip_upload: "{{ if not .Prerelease }}true{{ end }}"
+    repository:
+      owner: PranayD1807
+      name: homebrew-tap
+    description: "commit-roaster beta — may be unstable."
     homepage: "https://github.com/PranayD1807/Commit-Roaster"

@@ -7,7 +7,9 @@ import (
 	"time"
 )
 
-const Version = "1.0.0"
+// Version is set at build time by GoReleaser via -ldflags.
+// When running locally with `go run` or `go build`, it defaults to "dev".
+var Version = "dev"
 
 // Run is the entry point called by main(). It seeds the RNG and dispatches commands.
 func Run() {

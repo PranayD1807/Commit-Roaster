@@ -44,10 +44,13 @@ jobs:
         go-version: '1.21'
 
     - name: Run Integration Tests
-      if: ${{ secrets.GEMINI_KEY != '' }}
       env:
         GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
-      # Write the secret into .env so geminiKey() can find it, then run tests
+      # Check if the secret is set in the shell to avoid GitHub Actions YAML context limitations
       run: |
+        if [ -z "$GEMINI_KEY" ]; then
+          echo "⚠️ GEMINI_KEY secret is not configured. Skipping integration tests."
+          exit 0
+        fi
         echo "GEMINI_KEY=${GEMINI_KEY}" > .env
         go test -v -tags integration ./tests/ -run TestGemini -timeout 120s

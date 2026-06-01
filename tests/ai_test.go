@@ -53,9 +53,9 @@ func TestAIDisableByDefaultAndCommands(t *testing.T) {
 
 	// Simulate user typing:
 	// Choose Gemini: 1 [Enter]
-	// Choose Gemini 2.5 Flash: 1 [Enter]
 	// Enter API Key: my-secret-key-123 [Enter]
-	userInput := "1\n1\nmy-secret-key-123\n"
+	// Choose Gemini 2.5 Flash (index 1 of fallback list): 1 [Enter]
+	userInput := "1\nmy-secret-key-123\n1\n"
 	rIn, wIn, _ := os.Pipe()
 	os.Stdin = rIn
 	go func() {

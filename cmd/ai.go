@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"bufio"
+	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/PranayD1807/Commit-Roaster/internal/config"
 )
@@ -81,8 +85,27 @@ func RunAIEnable() {
 		os.Exit(1)
 	}
 
-	// 2. Select model
-	models := config.ProviderModels(provider)
+	// 2. Enter API key first so we can use it to fetch models
+	fmt.Println()
+	fmt.Print("  Enter API Key: ")
+	apiKey, _ := reader.ReadString('\n')
+	apiKey = strings.TrimSpace(apiKey)
+	if apiKey == "" {
+		fmt.Fprintln(os.Stderr, "  ❌ API Key cannot be empty. Setup aborted.")
+		os.Exit(1)
+	}
+
+	// 3. Select model (dynamic list with local fallback)
+	fmt.Println()
+	fmt.Printf("  🔄 Fetching live available models for %s...\n", config.ProviderDisplayName(provider))
+	models, err := fetchModelsFromAPI(provider, apiKey)
+	
+	if err != nil {
+		fmt.Printf("  ⚠️  Could not fetch live models (%v).\n", err)
+		fmt.Println("     Falling back to pre-configured local default models.")
+		models = config.ProviderModels(provider)
+	}
+
 	fmt.Println()
 	fmt.Printf("  Select Model for %s:\n", config.ProviderDisplayName(provider))
 	for i, m := range models {
@@ -95,8 +118,8 @@ func RunAIEnable() {
 	modelChoice = strings.TrimSpace(modelChoice)
 
 	idx := 0
-	_, err := fmt.Sscan(modelChoice, &idx)
-	if err != nil || idx < 1 || idx > len(models)+1 {
+	_, errScan := fmt.Sscan(modelChoice, &idx)
+	if errScan != nil || idx < 1 || idx > len(models)+1 {
 		fmt.Fprintln(os.Stderr, "  ❌ Invalid choice. Setup aborted.")
 		os.Exit(1)
 	}
@@ -112,16 +135,6 @@ func RunAIEnable() {
 		}
 	} else {
 		model = models[idx-1]
-	}
-
-	// 3. Enter API key
-	fmt.Println()
-	fmt.Print("  Enter API Key: ")
-	apiKey, _ := reader.ReadString('\n')
-	apiKey = strings.TrimSpace(apiKey)
-	if apiKey == "" {
-		fmt.Fprintln(os.Stderr, "  ❌ API Key cannot be empty. Setup aborted.")
-		os.Exit(1)
 	}
 
 	// 4. Save Config
@@ -140,6 +153,107 @@ func RunAIEnable() {
 	fmt.Println()
 	fmt.Printf("  ✅ AI roaster enabled with %s (%s)!\n", config.ProviderDisplayName(provider), model)
 	fmt.Println()
+}
+
+func fetchModelsFromAPI(provider, apiKey string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+
+	var url string
+	var req *http.Request
+	var err error
+
+	switch provider {
+	case "gemini":
+		url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + apiKey
+		req, err = http.NewRequestWithContext(ctx, "GET", url, nil)
+	case "claude":
+		url = "https://api.anthropic.com/v1/models"
+		req, err = http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err == nil {
+			req.Header.Set("x-api-key", apiKey)
+			req.Header.Set("anthropic-version", "2023-06-01")
+		}
+	case "chatgpt":
+		url = "https://api.openai.com/v1/models"
+		req, err = http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err == nil {
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+	default:
+		return nil, fmt.Errorf("unknown provider: %s", provider)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
+
+	var found []string
+
+	switch provider {
+	case "gemini":
+		var result struct {
+			Models []struct {
+				Name string `json:"name"`
+			} `json:"models"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return nil, err
+		}
+		for _, m := range result.Models {
+			name := strings.TrimPrefix(m.Name, "models/")
+			// Filter for gemini models that can be used for text generation
+			if strings.HasPrefix(name, "gemini-") {
+				found = append(found, name)
+			}
+		}
+	case "claude":
+		var result struct {
+			Data []struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return nil, err
+		}
+		for _, m := range result.Data {
+			if strings.HasPrefix(m.ID, "claude-") {
+				found = append(found, m.ID)
+			}
+		}
+	case "chatgpt":
+		var result struct {
+			Data []struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return nil, err
+		}
+		for _, m := range result.Data {
+			id := m.ID
+			if strings.HasPrefix(id, "gpt-") || strings.HasPrefix(id, "o1-") || strings.HasPrefix(id, "o3-") {
+				found = append(found, id)
+			}
+		}
+	}
+
+	if len(found) == 0 {
+		return nil, fmt.Errorf("no matching text generation models found")
+	}
+
+	return found, nil
 }
 
 func RunAIDisable() {

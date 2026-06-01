@@ -34,7 +34,12 @@ func CmdHook(msgFile string) {
 			}
 			return
 		}
-		// Fall back silently to rule-based on AI failure
+		// Only surface permanent errors (bad key) — transient errors fall back silently
+		kind, aiMsg := airoaster.ClassifyError(err)
+		if kind == airoaster.ErrInvalidKey {
+			fmt.Fprintf(os.Stderr, "  ⚠️  AI Roast skipped (%s)\n", aiMsg)
+		}
+		// Fall back to rule-based
 	}
 
 	result := roaster.Analyze(msg)

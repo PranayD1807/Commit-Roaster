@@ -56,7 +56,8 @@ func CmdRoast(n int) {
 				}
 				continue
 			}
-			fmt.Fprintf(os.Stderr, "  ⚠️  AI Roast failed: %v. Falling back to rule-based roast.\n", aiErr)
+			_, aiMsg := airoaster.ClassifyError(aiErr)
+			fmt.Fprintf(os.Stderr, "  ⚠️  AI Roast failed (%s). Falling back to rule-based roast.\n", aiMsg)
 		}
 
 		result := roaster.Analyze(msg)

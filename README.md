@@ -1,7 +1,7 @@
 <div align="center">
   <h1>🔥 commit-roaster</h1>
   <p><strong>A CLI tool that roasts your terrible git commit messages.</strong></p>
-  <p>No AI. No API keys. Just pure, hardcoded malice.</p>
+  <p>Rule-based by default. Optionally powered by Gemini, Claude, or ChatGPT for extra creative pain.</p>
 </div>
 
 <br />
@@ -13,7 +13,8 @@ The commits still go through — because breaking your workflow is evil — but 
 ## Features
 - **One-Command Setup:** Run `commit-roaster setup` and you're done. Works on Bash, Zsh, Fish, and PowerShell.
 - **Zero Conflicts:** Doesn't touch `.git/hooks`. Works alongside Husky, pre-commit, Lefthook, and any other hook manager.
-- **Fast & Local:** No AI, no network dependencies, completely offline heuristic matching entirely in Go.
+- **Fast & Offline by Default:** Rule-based heuristics, no network dependencies, instant feedback.
+- **Optional AI Mode:** Enable Gemini, Claude, or ChatGPT for creative, LLM-powered roasts — disabled by default.
 - **Cross-Platform:** Supports macOS, Linux, and Windows out of the box.
 - **Historical Analysis:** Run `stats` to view an audit of your commit history's overall hygiene.
 - **12 Brutal Rules:** More than 140 randomly rotated roasts so you rarely get the same insult twice.
@@ -169,14 +170,21 @@ commit-roaster ai disable
 
 Want to make the roasts more savage? Adding new rules is incredibly easy!
 
-1. Add your new `RuleID` constant in `roaster/rules.go`.
+1. Add your new `RuleID` constant in `internal/roaster/rules.go`.
 2. Register it in `DefaultRules()` and write a simple `checkMyRule(msg)` bool function.
-3. Add 10-15 funny strings to the `roastTemplates` map inside `roaster/roasts.go`. 
+3. Add 10-15 funny strings to the `roastTemplates` map inside `internal/roaster/roasts.go`.
 
 ### Running Tests
-To verify the core engine and ensure no regressions involve modifying user filesystem states, run the isolated test suite locally:
+
+**Unit tests** (no API key required):
 ```bash
-go test ./... -v
+go test ./...
+```
+
+**Integration tests** against the live Gemini API (requires a free key from [aistudio.google.com](https://aistudio.google.com)):
+```bash
+# Add GEMINI_KEY=your_key to a .env file in the project root, then:
+go test -v -tags integration ./tests/ -run TestGemini -timeout 120s
 ```
 
 Pull requests are actively encouraged!

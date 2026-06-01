@@ -48,6 +48,7 @@ func CmdStats() {
 	}
 
 	var results []roaster.Result
+	var lastErrKind airoaster.ErrorKind = -1 // track to avoid repeating the same warning
 	for _, line := range lines {
 		if strings.TrimSpace(line) == "" {
 			continue
@@ -76,7 +77,11 @@ func CmdStats() {
 				}
 				continue
 			}
-			fmt.Fprintf(os.Stderr, "  ⚠️  AI Roast failed for commit: %v. Falling back to rule-based roaster.\n", err)
+			kind, aiMsg := airoaster.ClassifyError(err)
+			if kind != lastErrKind {
+				fmt.Fprintf(os.Stderr, "  ⚠️  AI Roast failed (%s). Falling back to rule-based roaster.\n", aiMsg)
+				lastErrKind = kind
+			}
 		}
 
 		results = append(results, roaster.Analyze(line))

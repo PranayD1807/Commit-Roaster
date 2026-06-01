@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
-    name: Run Unit Tests
+  unit-tests:
+    name: Unit Tests
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -16,16 +16,39 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.21'
 
-    - name: Check out code
-      uses: actions/checkout@v4
-      
     - name: Ensure Local Git Config Isolation
       run: git config --global --add safe.directory "*"
 
-    - name: Run Tests
+    - name: Run Unit Tests
       run: go test -v ./...
+
+  integration-tests:
+    name: Integration Tests (Gemini)
+    runs-on: ubuntu-latest
+    # Only run when the secret is available (skipped on forks/PRs without access)
+    if: ${{ secrets.GEMINI_KEY != '' }}
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Run Integration Tests
+      env:
+        GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+      # Write the secret into .env so geminiKey() can find it, then run tests
+      run: |
+        echo "GEMINI_KEY=${GEMINI_KEY}" > .env
+        go test -v -tags integration ./tests/ -run TestGemini -timeout 120s

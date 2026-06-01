@@ -72,7 +72,7 @@ func TestAIDisableByDefaultAndCommands(t *testing.T) {
 	io.Copy(&buf, rOut)
 	enableOut := buf.String()
 
-	if !strings.Contains(enableOut, "AI roaster enabled with Google Gemini (gemini-2.5-flash)") {
+	if !strings.Contains(enableOut, "AI roaster enabled with Google Gemini (gemini-3.1-flash-lite)") {
 		t.Errorf("Unexpected output on enable: %s", enableOut)
 	}
 
@@ -143,7 +143,7 @@ func TestStatsPromptAndExecution(t *testing.T) {
 	cfg := config.Config{
 		AIEnabled: true,
 		Provider:  "gemini",
-		Model:     "gemini-2.5-flash",
+		Model:     "gemini-3.1-flash-lite",
 		APIKey:    "test-key",
 	}
 	if err := config.Save(cfg); err != nil {
@@ -241,7 +241,7 @@ func TestRoastAndHookWithAI(t *testing.T) {
 	cfg := config.Config{
 		AIEnabled: true,
 		Provider:  "gemini",
-		Model:     "gemini-2.5-flash",
+		Model:     "gemini-3.1-flash-lite",
 		APIKey:    "test-key",
 	}
 	_ = config.Save(cfg)

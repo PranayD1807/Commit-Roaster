@@ -94,7 +94,7 @@ func MaskKey(key string) string {
 func ProviderModels(provider string) []string {
 	switch provider {
 	case "gemini":
-		return []string{"gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"}
+		return []string{"gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"}
 	case "claude":
 		return []string{"claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-sonnet-4-20250514", "claude-haiku-4-20250414"}
 	case "chatgpt":

@@ -117,7 +117,7 @@ func TestGeminiRoastBadCommit(t *testing.T) {
 	t.Logf("┌─ Input:    %q", input)
 	t.Logf("│  Expected: %s", expected)
 
-	roast, err := roastWithRetry(t, "gemini", "gemini-2.5-flash", apiKey, input, 3)
+	roast, err := roastWithRetry(t, "gemini", "gemini-3.1-flash-lite", apiKey, input, 3)
 	if err != nil {
 		t.Fatalf("│  Error:    %v", err)
 	}
@@ -143,7 +143,7 @@ func TestGeminiCleanCommit(t *testing.T) {
 	t.Logf("┌─ Input:    %q", input)
 	t.Logf("│  Expected: %s", expected)
 
-	roast, err := roastWithRetry(t, "gemini", "gemini-2.5-flash", apiKey, input, 3)
+	roast, err := roastWithRetry(t, "gemini", "gemini-3.1-flash-lite", apiKey, input, 3)
 	if err != nil {
 		t.Fatalf("│  Error:    %v", err)
 	}
@@ -183,7 +183,7 @@ func TestGeminiWIPCommit(t *testing.T) {
 			t.Logf("┌─ Input:    %q", tc.input)
 			t.Logf("│  Expected: %s", tc.expected)
 
-			roast, err := roastWithRetry(t, "gemini", "gemini-2.5-flash", apiKey, tc.input, 3)
+			roast, err := roastWithRetry(t, "gemini", "gemini-3.1-flash-lite", apiKey, tc.input, 3)
 			if err != nil {
 				t.Fatalf("│  Error:    %v", err)
 			}

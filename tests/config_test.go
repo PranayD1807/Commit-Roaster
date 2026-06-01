@@ -36,7 +36,7 @@ func TestConfigRoundTrip(t *testing.T) {
 	testCfg := config.Config{
 		AIEnabled: true,
 		Provider:  "gemini",
-		Model:     "gemini-2.5-flash",
+		Model:     "gemini-3.1-flash-lite",
 		APIKey:    "test-api-key-12345",
 	}
 

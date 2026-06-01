@@ -125,7 +125,7 @@ commit-roaster ai enable
 ```
 This interactive setup will guide you through:
 1. Selecting your AI provider (Gemini, Claude, or ChatGPT).
-2. Selecting from the latest supported models (e.g., `gemini-2.5-flash`, `claude-sonnet-4-20250514`, `gpt-4.1`).
+2. Selecting from the latest supported models (e.g., `gemini-3.1-flash-lite`, `claude-3-5-sonnet-latest`, `gpt-4o`).
 3. Entering your API key.
 
 To check your current AI roaster configuration and status:

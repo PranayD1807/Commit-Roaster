@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -71,6 +72,16 @@ func roastWithRetry(t *testing.T, provider, model, apiKey, input string, maxRetr
 
 		errStr := err.Error()
 
+		// If it's an unrecoverable daily limit error (e.g. GenerateRequestsPerDay or quotaValue:20),
+		// fail immediately so we do not waste time retrying a limit that only resets at midnight.
+		isDailyLimit := strings.Contains(errStr, "GenerateRequestsPerDay") || 
+			strings.Contains(errStr, "quotaValue:20") || 
+			strings.Contains(errStr, "current quota, please check your plan")
+		if isDailyLimit {
+			t.Log("│  ❌ Daily free-tier quota exhausted (20 requests/day). Failing integration test immediately.")
+			break
+		}
+
 		isRateLimit := strings.Contains(errStr, "429") || 
 			strings.Contains(errStr, "RESOURCE_EXHAUSTED") || 
 			strings.Contains(errStr, "rate limit") || 
@@ -78,9 +89,15 @@ func roastWithRetry(t *testing.T, provider, model, apiKey, input string, maxRetr
 
 		if i < maxRetries && isRateLimit {
 			sleepDur := 15 * time.Second
-			if strings.Contains(errStr, "Please retry in") {
-				sleepDur = 30 * time.Second
+			
+			// Parse exact retry delay from Gemini API response: e.g., "Please retry in 22.049730293s."
+			re := regexp.MustCompile(`Please retry in\s+([0-9a-zA-Z.]+)`)
+			if matches := re.FindStringSubmatch(errStr); len(matches) > 1 {
+				if parsedDur, parseErr := time.ParseDuration(matches[1]); parseErr == nil {
+					sleepDur = parsedDur + 1*time.Second // add 1 second buffer
+				}
 			}
+
 			t.Logf("│  ⚠️ Rate limit hit. Sleeping %v before retry %d/%d...", sleepDur, i+1, maxRetries)
 			time.Sleep(sleepDur)
 			continue
